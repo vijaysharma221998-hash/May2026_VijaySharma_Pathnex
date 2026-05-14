@@ -1,0 +1,99 @@
+# Day 13 - DEBUG DAY
+
+Fix the following broken files:
+
+## Ansible (Fixed)
+
+---
+- name: Fixed
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Install Nginx
+      yum:
+        name: nginx
+        state: present
+
+## Terraform (Fixed)
+
+provider "aws" {
+    region = "us-east-1"
+}
+
+resource "aws_instance" "EC2" {
+    ami = "ami-0asjajfh1211243"
+    instance_type = "c5.large"
+    tags = {
+        Name: "Fixed"
+    }
+}
+
+## Kubernetes (Fixed) 
+
+apiVersion: app/v1
+kind: Deployment
+metadata:
+  name: Fixed
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app broken
+
+  template:
+    metadata:
+      labels:
+        app fixed
+
+    spec:
+      containers:
+        - name: app
+          image: nginx
+
+# Matrix Builds
+
+## Jenkins Pipeline - Matrix Build
+You will learn how to **run the same build on multiple environemnts**
+
+pipeline {
+    agent any
+    environment {
+        INSTITUTE_NAME = "Pathnex"
+    }
+    stages{
+        stage('Matrix Build'){
+            matrix{
+                axes{
+                    axis{
+                        name 'JAVA_VERSION'
+                        values '8', '11', '17'
+                    }
+                }
+                stages {
+                    stage('Build') {
+                        steps {
+                            sh "echo Building with Java ${JAVA_VERSION}"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+## GitLab CI - Matrix Jobs
+You will learn how to **run jobs across multiple environments using matrix**.
+
+stages:
+  - build
+
+build:
+  stage: build
+  image: maven:3.8.1-jdk-17
+  parallel:
+    matrix:
+      - JAVA-VERSION: ['8','11','17']
+  script:
+    - echo "Building with Java $JAVA_VERSION"
