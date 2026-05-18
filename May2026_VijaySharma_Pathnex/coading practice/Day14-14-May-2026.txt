@@ -1,0 +1,191 @@
+# Day 14 - Mini Project
+
+## Terraform - Create an EC2 Instance (c5.xlarge)
+
+provider "aws" {
+    region = "us-east-1"
+}
+
+# VPC
+resource "aws_vpc" "main" {
+    CIDR = "10.0.0.0/16"
+}
+
+# Subnet
+resource "aws_subnet" "public_subnet" {
+    vpc_id  = aws_vpc.main.id
+    cidr_block = "10.0.1.0/24"
+    map_public_ip_on_launch = true
+}
+
+# Internet Gateway
+resource "aws_internet_gateway" "igw" {
+    vpc_id = aws_vpc.main.id
+}
+
+# Route Table
+resource "aws_route_table" "public_rt" {
+    vpc_id = aws_vpc.main.id
+
+    route{
+        cidr_block = "0.0.0.0/0"
+        gateway_id = aws_internet_gateway.igw.id
+    }
+}
+
+# Route Table Association
+resource "aws_route_table_association" "rt_assoc" {
+    subnet_id  = aws_subnet.public_subnet.id
+    route_table_id = aws_route_table.public_rt.id
+}
+
+# Security Group
+resource "aws_security_group" "sg" {
+    name = "allow_ssh"
+    vpc_id = aws_vpc.main.id
+
+    ingress {
+        from_port = 22
+        to_port = 22
+        protocol = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# EC2 Instance
+resource "aws_instance" "ec2" {
+  ami                    = "ami-0c02fb55956c7d316"
+  instance_type          = "c5.xlarge"
+  subnet_id              = aws_subnet.public_subnet.id
+  vpc_security_group_ids = [aws_security_group.sg.id]
+
+  tags = {
+    Name = "Pathnex-EC2"
+  }
+}
+
+## Ansible — Install Nginx & Deploy HTML File
+
+---
+- name: Install Nginx and deploy HTML
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Install nginx
+      yum:
+        name: nginx
+        state: present
+
+    - name: Start nginx
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: Deploy HTML file
+      copy:
+        content: "<h1>Welcome to Pathnex</h1>"
+        dest: /usr/share/nginx/html/index.html
+
+
+## Kubernetes — Create Deployment + Service
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pathnex-deployment
+
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: nginx
+
+  template:
+    metadata:
+      labels:
+        app: nginx
+
+    spec:
+      containers:
+        - name: nginx
+          image: nginx
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pathnex-service
+
+spec:
+  selector:
+    app: nginx
+
+  ports:
+    - port: 80
+      targetPort: 80
+
+  type: NodePort
+
+## Shell — Print CPU, Memory, Disk
+#!/bin/bash
+
+echo "CPU Usage:"
+top -bn1 | grep "Cpu"
+
+echo "Memory Usage:"
+free -h
+
+echo "Disk Usage:"
+df -h
+
+# Scheduled Pipelines
+
+## 🔹 Jenkins Pipeline — Scheduled Build
+You will learn how to **schedule a Jenkins pipeline using cron**.
+
+pipeline {
+    agent any
+    environment {
+        INSTITUTE_NAME = "Pathnex"
+    }
+    triggers {
+        cron('H 2 * * *') // every day at 2 AM
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/Pathnex/sample-java-app.git'
+            }
+        }
+        stage('Build') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+    }
+}
+
+## 🔹 GitLab CI — Scheduled Pipeline
+You will learn how to **schedule GitLab CI pipelines via cron**.
+
+stages:
+  - build
+
+build:
+  stage: build
+  image: maven:3.8.1-jdk-17
+  script:
+    - git clone https://github.com/Pathnex/sample-java-app.git
+    - cd sample-java-app
+    - mvn clean package
