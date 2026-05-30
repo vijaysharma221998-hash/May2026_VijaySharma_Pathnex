@@ -2,35 +2,38 @@
 
 Fix these intentionally broken files:
 
-## Ansible — Broken
+## Ansible — Fixed
+---
+- name: Install nginx
+  hosts: all
 
-- name Install nginx
- hosts all
- tasks:
-  - name missing
-    yum:
-      name nginx
-      state present
+  tasks:
+    - name: Install nginx
+      yum:
+        name: nginx
+        state: present
 
+## Terraform — Fixed
 
-## Terraform — Broken
+resource "aws_s3_bucket" "BadBucket" {
+  bucket = "pathnex-bucket"
 
-resource "aws_s3" "BadBucket" {
-bucket = pathnex-bucket
-acl public-read
+  acl = "public-read"
 }
 
 
-## Kubernetes — Broken
+## Kubernetes — Fixed
 
-apiVersion v1
-kind Pod
+apiVersion: v1
+kind: Pod
+
 metadata:
- name brokenpod
+  name: brokenpod
+
 spec:
- containers:
-  -name app
-   image nginx
+  containers:
+    - name: app
+      image: nginx
 
 
 # Rollback Strategies
